@@ -3,13 +3,9 @@
 import os
 from collections import Counter,OrderedDict
 import itertools
+from math import gcd
 
-cyrillic = [
-    'а', 'б', 'в', 'г', 'д', 'е', 'ж', 
-    'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о',
-    'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 
-    'ч', 'ш', 'щ', 'ы', 'ь', 'э', 'ю', 'я'
-]
+cyrillic = 'абвгдежзийклмнопрстуфхцчшщьыэюя'
 
 class Text:
     def __init__(self,path):
@@ -55,9 +51,6 @@ class Bigramms:
             # )
         return freq
 
-#возвращает нсд и обратное число в кольце по модулю
-#а - число, b - модуль
-
 class Reverse:
     def ensd(self, a, b):
         if a == 0:
@@ -72,7 +65,7 @@ class Reverse:
         if self.nsd == 1:
             return x % n
         
-def find_a_key(lang1,lang2,bgrm1,bgrm2,alpha,m):
+def find_keys(lang1,lang2,bgrm1,bgrm2,alpha,m):
     x1 = cyrillic.index(lang1[0]) * m + cyrillic.index(lang1[1])
     x2 = cyrillic.index(lang2[0]) * m + cyrillic.index(lang2[1])   
     #популярные биграммы в шифротексте
@@ -86,7 +79,6 @@ def find_a_key(lang1,lang2,bgrm1,bgrm2,alpha,m):
         solution = rev.reverse(abs(x1-x2),m**2)
     elif nsd[0] > 1:
         a = abs(x1 - x2) // nsd[0]
-        
         if a == 0:
             solution = None
         elif a > 0:
@@ -102,21 +94,23 @@ def find_a_key(lang1,lang2,bgrm1,bgrm2,alpha,m):
                 incremented += a2
 
                 
-    final_a = []
+    final_pairs = []
+    
     #когда одно решение
     if type(solution) == int:
-        final_a.append(((y1-y2)*(solution)) % m**2)
+        a = ((y1-y2)*(solution))%m**2
+        b = (y1 - x1 * a) % m**2
+        final_pairs.append((a,b))
     else:
         if solution != None:
             for sol in solution:
-                final_a.append((a1*(sol))%m**2)
-    return final_a
+                a = (a1*(sol))%m**2
+                b = (y1 - x1 * a) % m**2
+                final_pairs.append((a,b))
+    
+    #print(final_pairs)
+    return final_pairs
 
-def find_b_key(l_bigram,ci_bigram,a,m,cyrillic):
-    x = cyrillic.index(l_bigram[0]) * m + cyrillic.index(l_bigram[1])  
-    y = cyrillic.index(ci_bigram[0]) * m + cyrillic.index(ci_bigram[1])  
-    b = (x - y * a) % m**2
-    return b
 
 def correspondance_index(text):
     result = 0
@@ -139,6 +133,7 @@ def decrypt(a_reversed,b,bigramm,m,cyrillic):
     decrypted_bigramm = cyrillic[x1] + cyrillic[x2]
     return decrypted_bigramm
 
+
 filename = 'lab3_var11.txt'
 abs_path = os.path.dirname(__file__)
 full_path = os.path.join(abs_path,filename)
@@ -150,38 +145,32 @@ bigramms.break_into_bigramms()
 bigramms.bigramms_no_intersect()
 frequency = bigramms.frequency(bigramms.bigramms,bigramms.bigramms_amount)
 lang_popular_bigrams = ['ст','но','то','на','ен']
+mod = 31
 top = sorted(frequency.items(), key=lambda x:-x[1])[:5]
 cipher_popular_bigrams = [i[0] for i in top]
 
-# for sym in cyrillic:
-#     sol = find_a_key('ст',f'н{sym}',top[0][0],top[1][0],cyrillic,31)
-#     if sol != None:
-#         print(sol)
-a_result = []
-b_result = []
+result = []
 l_double_combos = [i for i in itertools.permutations(lang_popular_bigrams,2)]
 ci_double_combos = [i for i in itertools.permutations(cipher_popular_bigrams,2)]
 for la_pair in l_double_combos:
     for ci_pair in ci_double_combos:
-        a_result.append(find_a_key(la_pair[0],la_pair[1],ci_pair[0],ci_pair[1],cyrillic,31))
+        key_pair = find_keys(la_pair[0],la_pair[1],ci_pair[0],ci_pair[1],cyrillic,31)
+        for pair in key_pair:
+            result.append(pair)
 
-for lst in a_result:
-    for a in lst:
-        for la_bgrm in lang_popular_bigrams:
-            for ci_bgrm in cipher_popular_bigrams:
-                b_result.append(find_b_key(la_bgrm,ci_bgrm,a,31,cyrillic))
+logfile = open(r'C:\Users\funro\Desktop\univer\kripta\cryptolabs\fb-labs-2020\cp_3\CP3_Chypchev_Kyrychuk_FB-84\laba.log','w+')
 
-reverse = Reverse()
-decrypted_texts = []
-for lst in a_result:
-    for a_key in list(set(lst)):
-        for b_key in list(set(b_result)):
-            text = ''
-            for bigram in bigramms.bi_no_intersect:
-                a_key_reversed = reverse.reverse(a,31)
-                text += decrypt(a_key_reversed,b_key,bigram,31,cyrillic)
-                #print(decrypt(a_key,b_key,bigram,31,cyrillic))
-            index = correspondance_index(text)
-            if index > 0.040:
-                print(index,a_key,b_key)
-
+rev = Reverse()
+for lst in list(set(result)):
+    try:
+        text = ''
+        for bigram in bigramms.bi_no_intersect:
+            a_reversed = rev.reverse(lst[0],mod**2)
+            text += decrypt(a_reversed,lst[1],bigram,31,cyrillic)
+        index = correspondance_index(text)
+        if index > 0.055:
+            logfile.write(f'\nRight keys found: a={lst[0]}, b={lst[1]} - correspondance index is {index}\nDecrypted text:\n{text}\n')
+        else:
+            logfile.write(f'\nKeys a={lst[0]}, b={lst[1]} are dropped - correspondance index is too low: {index}')
+    except:
+        pass
