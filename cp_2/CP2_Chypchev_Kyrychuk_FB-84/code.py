@@ -122,8 +122,6 @@ with open(r'C:\Users\funro\Desktop\univer\kripta\cryptolabs\fb-labs-2020\cp_2\CP
 
 text = Text(r'C:\Users\funro\Desktop\univer\kripta\cryptolabs\fb-labs-2020\cp_2\CP2_Chypchev_Kyrychuk_FB-84\cp_var11.txt',None)
 text.getcleartext()
-
-
 #найбільше значення у довжини ключа 17
 keylen = findkeylen()
 # вывели самые популярные буквы из каждоый части всех 17 блоков
