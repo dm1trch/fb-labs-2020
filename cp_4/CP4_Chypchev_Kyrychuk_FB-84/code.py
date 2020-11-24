@@ -35,10 +35,14 @@ def miller_rabin(p):
         return True
 
 def primegenerator(size):
+    a= open(r'C:\Users\funro\Desktop\univer\kripta\cryptolabs\fb-labs-2020\cp_4\miller_rabin.log','w+')
     while True:
         num = random.getrandbits(256)
         if miller_rabin(num):
             return num
+        else:
+            a.write(f'\n{num} not OK - this number failed Miller-Rabin test.')
+            continue
 
 def generatekeypairs(keysize):
     a_keys,b_keys = [],[]
