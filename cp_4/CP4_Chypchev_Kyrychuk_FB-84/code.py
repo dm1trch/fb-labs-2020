@@ -1,6 +1,7 @@
 import random
 from math import gcd
 from reverse import Reverse
+from req import ServerSide
 
 def miller_rabin(p):
     if p == 2:
@@ -25,7 +26,6 @@ def miller_rabin(p):
             elif x == p - 1:
                 continue
             while j < s - 1:
-            #for j in range(s-1):
                 x = pow(x, 2, p)
                 if x == p - 1:
                     break
@@ -35,13 +35,17 @@ def miller_rabin(p):
         return True
 
 def primegenerator(size):
-    a= open(r'C:\Users\funro\Desktop\univer\kripta\cryptolabs\fb-labs-2020\cp_4\miller_rabin.log','w+')
+    a = open(r'C:\Users\funro\Desktop\univer\kripta\cryptolabs\fb-labs-2020\cp_4\miller_rabin.log','w+')
     while True:
-        num = random.getrandbits(256)
-        if miller_rabin(num):
-            return num
+        number=pow(2,size-1)
+        for i in range(1,size-1,1):
+            b = random.randint(0,1)
+            number += (pow(2,i)*b)
+        number += 1
+        if miller_rabin(number):
+            return number
         else:
-            a.write(f'\n{num} not OK - this number failed Miller-Rabin test.')
+            a.write(f'\n{number} not OK - this number failed Miller-Rabin test.')
             continue
 
 def generatekeypairs(keysize):
@@ -65,43 +69,77 @@ def findkeysets(p,q):
             break
     #n,e = findopenkeys(p,q,n,phi_n)
     d = Reverse().reverse(e,phi_n) 
-    public_keys = [n,e]
-    private_keys = [d,p,q]
-    return public_keys,private_keys
+    public_n_e = [n,e]
+    private_d_p_q = [d,p,q]
+    return public_n_e,private_d_p_q
 
-def encrypt(n,e,M):
+def encrypt(M,e,n):
     return pow(M,e,n)
 
 def decrypt(encrypted_message,d,n):
     return pow(encrypted_message,d,n)
 
-def sign(d,decrypted_message,n):
+def sign(decrypted_message,d,n):
     return pow(decrypted_message,d,n)
 
 def verify(decrypted_message,signature,e,n):
     return pow(signature,e,n) == decrypted_message
 
-def send_key(public_keys,public_keys1,private_keys,opentext):
-    encrypted_message = encrypt(public_keys1[0],public_keys1[1],opentext)
-    signature = sign(private_keys[0],random_opentext,public_keys[0])
-    return encrypted_message,signature
+def send_key(public_n_e,public_n1_e1,private_d_p_q,opentext):
+    encrypted_message = encrypt(opentext,public_n1_e1[1],public_n1_e1[0])
+    signature = sign(opentext,private_d_p_q[0],public_n_e[0])
+    encrypted_signature = encrypt(signature,public_n1_e1[1],public_n1_e1[0])
+    return encrypted_message,encrypted_signature
 
-def recieve_key(encrypted_message,signature,public_keys,public_keys1,private_keys1):
+def recieve_key(encrypted_message,signature,public_n_e,public_n1_e1,private_d1_p1_q1):
     verified = {}
-    decrypted_message = decrypt(encrypted_message,private_keys1[0],public_keys1[0])
-    if verify(decrypted_message,signature,public_keys[1],public_keys[0]):
-        verified[signature] = decrypted_message
+    decrypted_message = decrypt(encrypted_message,private_d1_p1_q1[0],public_n1_e1[0])
+    decrypted_signature = decrypt(signature,private_d1_p1_q1[0],public_n1_e1[0])
+    if verify(decrypted_message,decrypted_signature,public_n_e[1],public_n_e[0]):
+        verified[decrypted_signature] = decrypted_message
     return verified
 
+def main():
+    keys = generatekeypairs(256)
+    p,q = keys[0][0],keys[0][1]
+    public_n_e,private_d_p_q = findkeysets(p,q)
+    p1,q1 = keys[1][0],keys[1][1]
+    public_n1_e1,private_d1_p1_q1 = findkeysets(p1,q1)
+    random_opentext = random.randint(0,public_n_e[0])
+    #print(f'Open text: {hex(random_opentext)};')
+    ciphertext,signature = send_key(public_n_e,public_n1_e1,private_d_p_q,random_opentext)
+    #print(f'Ciphertext: {hex(ciphertext)};')
+    verified = recieve_key(ciphertext,signature,public_n_e,public_n1_e1,private_d1_p1_q1)
+    for key,value in verified.items():
+        print(f'Verified signature: {str(hex(key))[2:]}\nDecrypted text: {str(hex(value))[2:]}')
+    print(f'Modulus: {str(hex(public_n_e[0]))[2:]}\nPublic Exponent: {str(hex(public_n_e[1]))[2:]}')
+    # print(f'Modulus B: {str(hex(public_n1_e1[0]))[2:]}\nPublic Exponent B: {str(hex(public_n1_e1[1]))[2:]}')
+    # print(f'p: {str(hex(p))[2:]}\nq: {str(hex(q))[2:]}\np1: {str(hex(p1))[2:]}\nq1: {str(hex(q1))[2:]}')
+    # print(f'Private Key: {str(hex(private_d_p_q[0]))[2:]}\nPrivate Key B: {str(hex(private_d1_p1_q1[0]))[2:]}')
+    # print(f'Ciphertext: {ciphertext}')
 
-keys = generatekeypairs(256)
-p,q = keys[0][0],keys[0][1]
-public_keys,private_keys = findkeysets(p,q)
-p1,q1 = keys[1][0],keys[1][1]
-public_keys1,private_keys1 = findkeysets(p1,q1)
-random_opentext = random.randint(0,public_keys[0])
-print(f'Open text: {random_opentext};')
-ciphertext,signature = send_key(public_keys,public_keys1,private_keys,random_opentext)
-print(f'Ciphertext text: {ciphertext};')
-verified = recieve_key(ciphertext,signature,public_keys,public_keys1,private_keys1)
-print(f'Decrypted text with verified signature: {verified};')
+
+def checkdecrypt(server):
+    p = primegenerator(256)
+    q = primegenerator(256)
+    public_n_e = findkeysets(p,q)[0]
+    public_n1_e1 = server.generatekeys(512)
+    open_text = random.randint(0,public_n_e[0])
+    print(open_text)
+    cipher_text = encrypt(open_text,public_n1_e1[1],public_n1_e1[0])
+    print(server.decrypt(cipher_text))
+
+def checkencrypt(server):
+    p = primegenerator(256)
+    q = primegenerator(256)
+    public_n_e,private_d_p_q = findkeysets(p,q)
+    server.generatekeys(512)
+    open_text = random.randint(0,public_n_e[0])
+    ciphertext = server.encrypt(open_text,public_n_e[1],public_n_e[0])
+    print(open_text)
+    print(decrypt(ciphertext,private_d_p_q[0],public_n_e[0]))
+
+# server = ServerSide()
+# checkencrypt(server)
+# checkdecrypt(server)
+main()
