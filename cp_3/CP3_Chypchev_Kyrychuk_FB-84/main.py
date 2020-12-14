@@ -67,15 +67,15 @@ def find_keys(lang1,lang2,bgrm1,bgrm2,alpha,m):
     y2 = cyrillic.index(bgrm2[0]) * m + cyrillic.index(bgrm2[1])
 
     rev = Reverse()
-    nsd = rev.ensd(abs(x1 - x2), m**2)
+    nsd = rev.ensd((x1 - x2)%m**2, m**2)
     solution = []
     if nsd[0] == 1:
-        solution = rev.reverse(abs(x1-x2),m**2)
+        solution = rev.reverse((x1-x2)%m**2, m**2)
     elif nsd[0] > 1:
         a = abs(y1 - y2) % nsd[0]
         if a != 0:
             solution = None
-        else:
+        elif a == 0:
             a1 = (x1 - x2) // nsd[0]
             a2 = (y1 - y2) // nsd[0]
             a3 = (m ** 2) // nsd[0]
@@ -102,6 +102,7 @@ def find_keys(lang1,lang2,bgrm1,bgrm2,alpha,m):
                     b = (y1 - x1 * a) % m ** 2
                     final_pairs.append((a, b))
 
+        # print(final_pairs)
         return final_pairs
 
 
